@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Calling Website</title>
+    <title>WebRTC Audio Call</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -17,8 +17,6 @@
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js"></script>
     <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
     <script>
         const firebaseConfig = {
@@ -36,7 +34,6 @@
         const firestore = firebase.firestore();
 
         let localStream;
-        let remoteStream;
         let peerConnection;
         const servers = {
             iceServers: [
@@ -47,44 +44,21 @@
         };
 
         document.addEventListener('DOMContentLoaded', async () => {
-            if (location.protocol !== 'https:') {
-                alert('This application requires HTTPS to access media devices.');
-                return;
-            }
-
             const callSection = document.getElementById('callSection');
             const callUI = document.getElementById('callUI');
             const userTokenDisplay = document.getElementById('userTokenDisplay');
             const tokenInput = document.getElementById('tokenInput');
             const callButton = document.getElementById('callButton');
             const endCallButton = document.getElementById('endCallButton');
-            const saveTokenButton = document.getElementById('saveTokenButton');
-            const loadTokenButton = document.getElementById('loadTokenButton');
 
-            let userToken = localStorage.getItem('userToken');
-            if (!userToken) {
-                userToken = generateToken();
-                localStorage.setItem('userToken', userToken);
-            }
+            const userToken = generateToken();
+            localStorage.setItem('userToken', userToken);
             userTokenDisplay.textContent = userToken;
 
             callSection.style.display = 'block';
 
             callButton.onclick = () => initiateCall(tokenInput.value);
             endCallButton.onclick = () => endCall();
-            saveTokenButton.onclick = () => {
-                localStorage.setItem('userToken', userToken);
-                alert('Token saved to local storage!');
-            };
-            loadTokenButton.onclick = () => {
-                const savedToken = localStorage.getItem('userToken');
-                if (savedToken) {
-                    userTokenDisplay.textContent = savedToken;
-                    alert('Token loaded from local storage!');
-                } else {
-                    alert('No token found in local storage.');
-                }
-            };
 
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -92,6 +66,7 @@
             } catch (error) {
                 console.error('Error accessing media devices.', error);
                 alert('Error accessing media devices. Please check browser permissions and use HTTPS.');
+                return;
             }
 
             firestore.collection('calls').doc(userToken).onSnapshot((snapshot) => {
@@ -102,18 +77,13 @@
             });
 
             async function initiateCall(remoteUserToken) {
-                if (!localStream) {
-                    alert('Local audio stream not available.');
-                    return;
-                }
-
                 callSection.style.display = 'none';
                 callUI.style.display = 'block';
 
                 peerConnection = new RTCPeerConnection(servers);
                 localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
-                remoteStream = new MediaStream();
+                const remoteStream = new MediaStream();
                 document.getElementById('remoteAudio').srcObject = remoteStream;
 
                 peerConnection.ontrack = (event) => {
@@ -142,18 +112,13 @@
             }
 
             async function answerCall(offer, userToken) {
-                if (!localStream) {
-                    alert('Local audio stream not available.');
-                    return;
-                }
-
                 callSection.style.display = 'none';
                 callUI.style.display = 'block';
 
                 peerConnection = new RTCPeerConnection(servers);
                 localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
-                remoteStream = new MediaStream();
+                const remoteStream = new MediaStream();
                 document.getElementById('remoteAudio').srcObject = remoteStream;
 
                 peerConnection.ontrack = (event) => {
@@ -206,12 +171,10 @@
     </script>
 </head>
 <body>
-    <h1>Audio Calling Website</h1>
+    <h1>WebRTC Audio Call</h1>
 
     <div id="callSection">
         <h2>Your Token: <span id="userTokenDisplay"></span></h2>
-        <button id="saveTokenButton">Save Token to Local Storage</button>
-        <button id="loadTokenButton">Load Token from Local Storage</button>
         <br><br>
         <input type="text" id="tokenInput" placeholder="Enter Token to Call">
         <button id="callButton">Call</button>
